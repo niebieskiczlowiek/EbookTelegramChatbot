@@ -4,6 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 application.properties
+pdf/*
 
 ### STS ###
 .apt_generated
