@@ -1,4 +1,4 @@
-package com.technischools.telegramApp.chatapi;
+package com.technischools.telegramApp.chatApi;
 
 import com.theokanning.openai.completion.chat.ChatCompletionResult;
 import com.theokanning.openai.completion.chat.ChatMessage;
