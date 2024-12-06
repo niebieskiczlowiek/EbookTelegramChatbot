@@ -99,6 +99,7 @@ public class ChatAPIService {
 
         // finds relevant pages based on user prompt
         List<PDDocument> relevantPages = PDFReader.findRelevantPages(pdfsPages, prompt);
+        relevantPages = relevantPages.subList(0, Math.min(5, relevantPages.size()));
 
         // retrieves text from the relevant pages
         StringBuilder pdfsText = new StringBuilder();
@@ -148,7 +149,8 @@ public class ChatAPIService {
         String learningText = this.getLearningText(userPrompt);
 
         String prompt = """
-                Na podstawie tego tekstu odpowiedz na zadane ci pytanie i udziel porad\
+                Na podstawie tego tekstu odpowiedz na zadane ci pytanie\
+                Jesli zostaniesz o to poproszony, udziel też porad\
                 
                 Pytanie:
                 ```
