@@ -1,12 +1,13 @@
 package com.technischools.telegramApp.chatApi;
 
-import com.technischools.telegramApp.pdfReader.PDFReader;
+import com.technischools.telegramApp.utils.PDFReader;
 import com.theokanning.openai.completion.chat.ChatCompletionRequest;
 import com.theokanning.openai.completion.chat.ChatCompletionResult;
 import com.theokanning.openai.completion.chat.ChatMessage;
 import com.theokanning.openai.service.OpenAiService;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,57 +16,98 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+* Class that handles all OpenAi API operations, such as:
+* - setting up and OpenAi chatbot
+* - generating text from prompts
+* - preparing prompts for execution
+* - retrieving necessary PDF training data
+* */
 @Slf4j
 @Service
 public class ChatAPIService {
     private OpenAiService openAiService;
     private String model;
     private final List<ChatMessage> chatMessages = new ArrayList<>();
+    private final String commonPath = "/home/lenovo/Desktop/Java/EbookChatbot/ebookTelegramChatbot/src/main/resources/pdf/";
 
     @Value("${openai.api.key:OPENAI_API_KEY}")
     String apiKey;
 
     @PostConstruct
-    public void init() {
+    public void init() throws IOException {
         this.openAiService = new OpenAiService(apiKey, Duration.ofSeconds(30));
         this.model = "gpt-4o";
         prepareChat();
     }
 
-    private void prepareChat() {
-        String text = this.getLearningText();
+    /*
+    * Prepares the chat for conversation
+    * Uses training data and custom prompts to make sure chat works properly
+    * */
+    private void prepareChat() throws IOException {
+//        String text = this.getLearningText("");
+//        System.out.println(text);
+//        String initMessage = """
+//                Na podstawie tekstu odpowiadaj na pytania\
+//                i udzielaj porad.\
+//                Gdy zostaniesz zapytany o coś spoza zakresu tekstu,\
+//                wytłumacz, że nie posiadasz takiej wiedzy.\
+//                Nie mów o tekście. Udawaj, że to twoja wiedza.\
+//                Zachowaj profesjonalny ton.\
+//                Przedstaw się jako asystent.\
+//                Staraj się odpowiadać w miare krótko\
+//
+//                Tekst:
+//                ```""" +
+//                text
+//                + """
+//                ```
+//                """;
         String initMessage = """
-                Na podstawie tekstu odpowiadaj na pytania\
-                i udzielaj porad.\
+                Jesteś asystentem w kwestiach diety i odżywiania.\
+                Będziesz otrzymywał zapytania oraz tekst, który może zawierać na nie odpowiedź.\
+                Na podstawie tekstu udzielaj odpowiedzi i porad.\
                 Gdy zostaniesz zapytany o coś spoza zakresu tekstu,\
                 wytłumacz, że nie posiadasz takiej wiedzy.\
                 Nie mów o tekście. Udawaj, że to twoja wiedza.\
-                Zachowaj profesjonalny ton.\
-                Przedstaw się jako asystent.\
-                Staraj się odpowiadać w miare krótko\
-                
-                Tekst:
-                ```""" +
-                text
-                + """
-                ```
                 """;
 
         ChatMessage systemMessage = new ChatMessage("system", initMessage);
         addNewMessage(systemMessage);
     }
 
-    private String getLearningText() {
-        String commonPath = "/home/lenovo/Desktop/Java/EbookChatbot/ebookTelegramChatbot/src/main/resources/pdf/";
-        List<String> paths = PDFReader.getFilesFromPath(commonPath);
-        assert paths != null;
+//    private String getLearningText() {
+//        List<String> paths = PDFReader.getFilesFromPath(this.commonPath);
+//        assert paths != null;
+//        StringBuilder pdfsText = new StringBuilder();
+//        paths.forEach(p -> {
+//            try {
+//                String pdfText = PDFReader.getTextFromPDF(this.commonPath + p);
+//                pdfsText.append(pdfText).append("\n");
+//            } catch (IOException e) {
+//                log.error("e: ", e);
+//            }
+//        });
+//        return pdfsText.toString();
+//    }
+    private String getLearningText(String prompt) throws IOException {
+        // gets all pages of all pdfs available
+        List<PDDocument> files = PDFReader.getFilesFromPath(this.commonPath);
+        assert files != null;
+        List<PDDocument> pdfsPages = PDFReader.splitIntoPages(files);
+
+        // finds relevant pages based on user prompt
+        List<PDDocument> relevantPages = PDFReader.findRelevantPages(pdfsPages, prompt);
+
+        // retrieves text from the relevant pages
         StringBuilder pdfsText = new StringBuilder();
-        paths.forEach(p -> {
+        relevantPages.forEach(p -> {
             try {
-                String pdfText = PDFReader.getTextFromPDF(commonPath + p);
+                String pdfText = PDFReader.getTextFromPDF(p);
                 pdfsText.append(pdfText).append("\n");
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                log.error("e: ", e);
             }
         });
         return pdfsText.toString();
@@ -102,8 +144,28 @@ public class ChatAPIService {
     /*
     * returns a generated result based on users prompt
     * */
-    public ChatCompletionResult getChatResponse(String userPrompt) {
-        ChatMessage userChatMessage = this.preparePrompt(userPrompt);
+    public ChatCompletionResult getChatResponse(String userPrompt) throws IOException {
+        String learningText = this.getLearningText(userPrompt);
+
+        String prompt = """
+                Na podstawie tego tekstu odpowiedz na zadane ci pytanie i udziel porad\
+                
+                Pytanie:
+                ```
+                """ +
+                userPrompt
+                + """
+                ```
+                
+                Tekst:
+                ```
+                """ +
+                learningText
+                + """
+                ```
+                """;
+
+        ChatMessage userChatMessage = this.preparePrompt(prompt);
         return generateChatCompletion(userChatMessage);
     }
 }

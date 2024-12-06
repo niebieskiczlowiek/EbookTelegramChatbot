@@ -12,6 +12,12 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import java.io.IOException;
+
+/*
+* Controller class for handling a basic Telegram chatbot,
+* to allow the user to talk to the Chat Api
+* */
 @Component
 public class BotController implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
     private TelegramClient telegramClient;
@@ -43,10 +49,20 @@ public class BotController implements SpringLongPollingBot, LongPollingSingleThr
         return this;
     }
 
+    /*
+    * Main method which retrieves text messages sent to the chatbot,
+    * gets a response from the ChatAPI based on the given text,
+    * and returns the API's response
+    * */
     @Override
     public void consume(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String message_text = this.botService.getBotResponse(update.getMessage().getText());
+            String message_text = null;
+            try {
+                message_text = this.botService.getBotResponse(update.getMessage().getText());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             long chat_id = update.getMessage().getChatId();
 
             SendMessage message = SendMessage
