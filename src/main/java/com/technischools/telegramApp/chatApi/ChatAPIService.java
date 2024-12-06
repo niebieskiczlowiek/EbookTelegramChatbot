@@ -28,7 +28,7 @@ public class ChatAPIService {
     @PostConstruct
     public void init() {
         this.openAiService = new OpenAiService(apiKey, Duration.ofSeconds(30));
-        this.model = "gpt-4-turbo";
+        this.model = "gpt-4o";
         prepareChat();
     }
 
@@ -41,6 +41,8 @@ public class ChatAPIService {
                 wytłumacz, że nie posiadasz takiej wiedzy.\
                 Nie mów o tekście. Udawaj, że to twoja wiedza.\
                 Zachowaj profesjonalny ton.\
+                Przedstaw się jako asystent.\
+                Staraj się odpowiadać w miare krótko\
                 
                 Tekst:
                 ```""" +
