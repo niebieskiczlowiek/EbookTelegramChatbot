@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,7 +27,7 @@ public class ChatAPIService {
 
     @PostConstruct
     public void init() {
-        this.openAiService = new OpenAiService(apiKey);
+        this.openAiService = new OpenAiService(apiKey, Duration.ofSeconds(30));
         this.model = "gpt-4-turbo";
         prepareChat();
     }
@@ -34,13 +35,11 @@ public class ChatAPIService {
     private void prepareChat() {
         String text = this.getLearningText();
         String initMessage = """
-                Na podstawie tekstu załączonego poniżej odpowiadaj na pytania\
+                Na podstawie tekstu odpowiadaj na pytania\
                 i udzielaj porad.\
-                Nie odpowiadaj na pytania, które nie są związane z tekstem.\
                 Gdy zostaniesz zapytany o coś spoza zakresu tekstu,\
                 wytłumacz, że nie posiadasz takiej wiedzy.\
-                
-                Nie wspominaj o przekazanym ci tekście. Udawaj, że jest to twoja własna wiedza.\
+                Nie mów o tekście. Udawaj, że to twoja wiedza.\
                 Zachowaj profesjonalny ton.\
                 
                 Tekst:
@@ -92,7 +91,7 @@ public class ChatAPIService {
         ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest
                 .builder()
                 .model(model)
-                .maxTokens(500)
+                .maxTokens(200)
                 .messages(chatMessages)
                 .build();
         return this.openAiService.createChatCompletion(chatCompletionRequest);
